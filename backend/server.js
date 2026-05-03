@@ -5,6 +5,8 @@ const helmet = require('helmet');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const connectDB = require('./config/db');
+const bcrypt = require('bcrypt');
+const Admin = require('./models/Admin');
 const { globalLimiter } = require('./middleware/rateLimiter');
 
 // Route imports
@@ -19,8 +21,34 @@ const menuRoutes = require('./routes/menuRoutes');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Connect to MongoDB
-connectDB();
+// Auto-seed admin from environment variables
+const seedAdminIfNeeded = async () => {
+    try {
+        const email = process.env.ADMIN_EMAIL;
+        const password = process.env.ADMIN_PASSWORD;
+        if (!email || !password) {
+            console.log('⚠️  ADMIN_EMAIL or ADMIN_PASSWORD not set — skipping admin seed.');
+            return;
+        }
+        const existing = await Admin.findOne({ email: email.toLowerCase() });
+        if (existing) {
+            console.log('ℹ️  Admin account already exists.');
+            return;
+        }
+        const passwordHash = await bcrypt.hash(password, 12);
+        await Admin.create({ email: email.toLowerCase(), passwordHash });
+        console.log(`✅ Admin account created: ${email}`);
+    } catch (err) {
+        console.error('❌ Failed to seed admin:', err.message);
+    }
+};
+
+// Connect to MongoDB then seed admin
+const startServer = async () => {
+    await connectDB();
+    await seedAdminIfNeeded();
+};
+startServer();
 
 // Security middleware
 app.use(helmet());
