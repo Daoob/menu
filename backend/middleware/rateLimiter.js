@@ -24,4 +24,16 @@ const authLimiter = rateLimit({
     legacyHeaders: false,
 });
 
-module.exports = { globalLimiter, authLimiter };
+// Init rate limiter: 5 requests per hour per IP (one-time setup endpoint)
+const initLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 5,
+    message: {
+        success: false,
+        message: 'Too many initialization attempts, please try again after 1 hour.',
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+module.exports = { globalLimiter, authLimiter, initLimiter };

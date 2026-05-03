@@ -7,6 +7,45 @@ const { generateAdminToken } = require('../utils/tokenUtils');
 const { logAction } = require('../utils/logger');
 
 /**
+ * Initialize First Admin
+ * POST /api/admin/init
+ */
+const initAdmin = async (req, res) => {
+    try {
+        const existingAdmin = await Admin.findOne();
+        if (existingAdmin) {
+            return res.status(400).json({
+                success: false,
+                message: 'Admin already initialized.',
+            });
+        }
+
+        const { email, password } = req.body;
+
+        const passwordHash = await bcrypt.hash(password, 10);
+
+        const admin = await Admin.create({
+            email: email.toLowerCase(),
+            passwordHash,
+        });
+
+        logAction('ADMIN_INITIALIZED', { adminId: admin._id, email: admin.email });
+
+        res.status(201).json({
+            success: true,
+            message: 'Admin account created successfully.',
+            admin: admin.toJSON(),
+        });
+    } catch (error) {
+        console.error('Init admin error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error.',
+        });
+    }
+};
+
+/**
  * Admin Login
  * POST /api/admin/login
  */
@@ -394,6 +433,7 @@ const getStats = async (req, res) => {
 };
 
 module.exports = {
+    initAdmin,
     adminLogin,
     generateCodes,
     getAllCodes,
