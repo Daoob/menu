@@ -2,8 +2,9 @@ const router = require('express').Router();
 const { body } = require('express-validator');
 const { handleValidation } = require('../middleware/validate');
 const adminAuth = require('../middleware/adminAuth');
-const { authLimiter } = require('../middleware/rateLimiter');
+const { authLimiter, initLimiter } = require('../middleware/rateLimiter');
 const {
+    initAdmin,
     adminLogin,
     generateCodes,
     getAllCodes,
@@ -13,6 +14,20 @@ const {
     renewSubscription,
     getStats,
 } = require('../controllers/adminController');
+
+// Initialize first admin (no auth required — only works when no admin exists)
+router.post(
+    '/init',
+    initLimiter,
+    [
+        body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
+        body('password')
+            .isLength({ min: 8 })
+            .withMessage('Password must be at least 8 characters'),
+    ],
+    handleValidation,
+    initAdmin
+);
 
 // Admin Login
 router.post(
